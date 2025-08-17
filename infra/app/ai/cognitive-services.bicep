@@ -17,7 +17,7 @@ param embeddingModelFormat string = 'OpenAI'
 param embeddingModelSkuName string = 'Standard'
 
 @description('The embedding model capacity')
-param embeddingModelCapacity int = 100
+param embeddingModelCapacity int = 50
 
 @description('The chat model name to deploy')
 param chatModelName string = 'gpt-4o'
@@ -29,7 +29,7 @@ param chatModelFormat string = 'OpenAI'
 param chatModelSkuName string = 'Standard'
 
 @description('The chat model capacity')
-param chatModelCapacity int = 100
+param chatModelCapacity int = 50
 
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-04-01-preview' = {
   name: aiServicesName
