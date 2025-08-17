@@ -72,4 +72,21 @@ Content-Type: application/json
 {
     "chatHistory": "User: What's the recommended way to handle errors in Azure Functions?\nCopilot: You should use try-catch blocks and return appropriate HTTP status codes. Here's a pattern for consistent error handling.\nUser: How should I structure my logging in Azure Functions?\nCopilot: Use the built-in logging framework and include correlation IDs. Here's an example of structured logging.\nUser: What's the best practice for managing environment variables in Azure Functions?\nCopilot: Use the built-in configuration system and avoid hardcoding values. Here's how to properly manage your settings.",
     "userQuery": "Generate a code style guide for the project"
+}
+
+### Generate stock analysis and investment recommendations using AI agent
+POST http://localhost:7071/api/snippets/stock-analysis
+Content-Type: application/json
+
+{
+    "chatHistory": "User: How do I implement financial analysis algorithms?\nCopilot: You can use various technical indicators and statistical models. Here's an example of a moving average crossover strategy.\nUser: What's the best way to handle risk management in trading algorithms?\nCopilot: Implement position sizing, stop-loss orders, and portfolio diversification. Here's a risk management framework.\nUser: How should I backtest trading strategies?\nCopilot: Use historical data and proper validation techniques. Here's a backtesting framework with performance metrics.",
+    "userQuery": "Generate comprehensive stock analysis and investment recommendations"
+}
+
+### Generate stock analysis without chat history (general analysis)
+POST http://localhost:7071/api/snippets/stock-analysis
+Content-Type: application/json
+
+{
+    "userQuery": "Analyze financial patterns and provide investment guidance"
 } 

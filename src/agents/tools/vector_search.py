@@ -6,9 +6,10 @@
 import json
 import logging
 import os
-from azure.identity.aio import DefaultAzureCredential
+
 from azure.ai.projects.aio import AIProjectClient
-from azure.ai.inference.aio import EmbeddingsClient
+from azure.identity.aio import DefaultAzureCredential
+
 from data import cosmos_ops
 
 # Configure logging for this module
