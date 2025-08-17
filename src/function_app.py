@@ -25,9 +25,11 @@
 
 import json
 import logging
+
 import azure.functions as func
+
+from agents import code_style, deep_wiki, stock_picker  # Modules for AI agent operations
 from data import cosmos_ops  # Module for Cosmos DB operations
-from agents import deep_wiki, code_style  # Modules for AI agent operations
 
 # Initialize the Azure Functions app
 # This is the main entry point for all function definitions
@@ -83,29 +85,46 @@ class ToolProperty:
 # Properties for the save_snippet tool
 # This tool saves code snippets with their vector embeddings
 tool_properties_save_snippets = [
-    ToolProperty(_SNIPPET_NAME_PROPERTY_NAME, "string", "A unique name or identifier for the code snippet. Provide this if you have a specific name for the snippet being saved. Essential for identifying the snippet later."),
-    ToolProperty(_PROJECT_ID_PROPERTY_NAME, "string", "An identifier for a project to associate this snippet with. Useful for organizing snippets. If omitted or not relevant, it defaults to 'default-project'."),
-    ToolProperty(_SNIPPET_PROPERTY_NAME, "string", "The actual code or text content of the snippet. Provide the content that needs to be saved and made searchable."),
+    ToolProperty(_SNIPPET_NAME_PROPERTY_NAME, "string", 
+                "A unique name or identifier for the code snippet. Essential for identifying the snippet later."),
+    ToolProperty(_PROJECT_ID_PROPERTY_NAME, "string", 
+                "An identifier for a project to associate this snippet with. Defaults to 'default-project'."),
+    ToolProperty(_SNIPPET_PROPERTY_NAME, "string", 
+                "The actual code or text content of the snippet to be saved and made searchable."),
 ]
 
 # Properties for the get_snippet tool
 # This tool retrieves previously saved snippets by name
 tool_properties_get_snippets = [
-    ToolProperty(_SNIPPET_NAME_PROPERTY_NAME, "string", "The unique name or identifier of the code snippet you want to retrieve. This is required to fetch a specific snippet."),
+    ToolProperty(_SNIPPET_NAME_PROPERTY_NAME, "string", 
+                "The unique name or identifier of the code snippet to retrieve."),
 ]
 
 # Properties for the deep_wiki tool
 # This tool generates comprehensive documentation from code snippets
 tool_properties_wiki = [
-    ToolProperty(_CHAT_HISTORY_PROPERTY_NAME, "string", "Optional. The preceding conversation history (e.g., user prompts and AI responses). Providing this helps contextualize the wiki content generation. Omit if no relevant history exists or if a general wiki is desired."),
-    ToolProperty(_USER_QUERY_PROPERTY_NAME, "string", "Optional. The user's specific question, instruction, or topic to focus the wiki documentation on. If omitted, a general wiki covering available snippets might be generated."),
+    ToolProperty(_CHAT_HISTORY_PROPERTY_NAME, "string", 
+                "Optional. The preceding conversation history for context. Omit for a general wiki."),
+    ToolProperty(_USER_QUERY_PROPERTY_NAME, "string", 
+                "Optional. The user's specific question or topic to focus the wiki documentation on."),
 ]
 
 # Properties for the code_style tool
 # This tool generates coding style guides based on existing snippets
 tool_properties_code_style = [
-    ToolProperty(_CHAT_HISTORY_PROPERTY_NAME, "string", "Optional. The preceding conversation history (e.g., user prompts and AI responses). This can provide context for the code style analysis or guide generation. Omit if not available or not relevant."),
-    ToolProperty(_USER_QUERY_PROPERTY_NAME, "string", "Optional. The user's specific question, instruction, or prompt related to code style. If omitted, a general code style analysis or a default guide might be generated."),
+    ToolProperty(_CHAT_HISTORY_PROPERTY_NAME, "string", 
+                "Optional. The preceding conversation history for context."),
+    ToolProperty(_USER_QUERY_PROPERTY_NAME, "string", 
+                "Optional. The user's specific question or prompt related to code style."),
+]
+
+# Properties for the stock_picker tool
+# This tool generates stock analysis and investment recommendations
+tool_properties_stock_picker = [
+    ToolProperty(_CHAT_HISTORY_PROPERTY_NAME, "string", 
+                "Optional. The preceding conversation history for financial analysis context."),
+    ToolProperty(_USER_QUERY_PROPERTY_NAME, "string", 
+                "Optional. The user's specific question or prompt related to stock analysis."),
 ]
 
 # Convert tool properties to JSON for MCP tool registration
@@ -114,6 +133,7 @@ tool_properties_save_snippets_json = json.dumps([prop.to_dict() for prop in tool
 tool_properties_get_snippets_json = json.dumps([prop.to_dict() for prop in tool_properties_get_snippets])
 tool_properties_wiki_json = json.dumps([prop.to_dict() for prop in tool_properties_wiki])
 tool_properties_code_style_json = json.dumps([prop.to_dict() for prop in tool_properties_code_style])
+tool_properties_stock_picker_json = json.dumps([prop.to_dict() for prop in tool_properties_stock_picker])
 
 # =============================================================================
 # SAVE SNIPPET FUNCTIONALITY
@@ -122,7 +142,12 @@ tool_properties_code_style_json = json.dumps([prop.to_dict() for prop in tool_pr
 # HTTP endpoint for saving snippets
 # This is accessible via standard HTTP POST requests
 @app.route(route="snippets", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
-@app.embeddings_input(arg_name="embeddings", input="{code}", input_type="rawText", embeddings_model="%EMBEDDING_MODEL_DEPLOYMENT_NAME%")
+@app.embeddings_input(
+    arg_name="embeddings", 
+    input="{code}", 
+    input_type="rawText", 
+    embeddings_model="%EMBEDDING_MODEL_DEPLOYMENT_NAME%"
+)
 async def http_save_snippet(req: func.HttpRequest, embeddings: str) -> func.HttpResponse:
     """
     HTTP trigger function to save a code snippet with its vector embedding.
@@ -196,10 +221,17 @@ async def http_save_snippet(req: func.HttpRequest, embeddings: str) -> func.Http
     arg_name="context",
     type="mcpToolTrigger",
     toolName="save_snippet",
-    description="Saves a given code snippet. It can take a snippet name, the snippet content, and an optional project ID. Embeddings are generated for the content to enable semantic search. The LLM should provide 'snippetname' and 'snippet' when intending to save.",
+    description="Saves a given code snippet. It can take a snippet name, the snippet content, " +
+                "and an optional project ID. Embeddings are generated for the content to enable " +
+                "semantic search. The LLM should provide 'snippetname' and 'snippet' when intending to save.",
     toolProperties=tool_properties_save_snippets_json,
 )
-@app.embeddings_input(arg_name="embeddings", input="{arguments.snippet}", input_type="rawText", embeddings_model="%EMBEDDING_MODEL_DEPLOYMENT_NAME%")
+@app.embeddings_input(
+    arg_name="embeddings", 
+    input="{arguments.snippet}", 
+    input_type="rawText", 
+    embeddings_model="%EMBEDDING_MODEL_DEPLOYMENT_NAME%"
+)
 async def mcp_save_snippet(context: str, embeddings: str) -> str:
     """
     MCP tool to save a code snippet with vector embedding.
@@ -228,9 +260,14 @@ async def mcp_save_snippet(context: str, embeddings: str) -> str:
         # 3. Validate required parameters
         if not name or not code:
             missing_fields = []
-            if not name: missing_fields.append(_SNIPPET_NAME_PROPERTY_NAME)
-            if not code: missing_fields.append(_SNIPPET_PROPERTY_NAME)
-            return json.dumps({"error": f"Missing essential arguments for save_snippet: {', '.join(missing_fields)}. Please provide both snippet name and content."})
+            if not name: 
+                missing_fields.append(_SNIPPET_NAME_PROPERTY_NAME)
+            if not code: 
+                missing_fields.append(_SNIPPET_PROPERTY_NAME)
+            return json.dumps({
+                "error": f"Missing essential arguments for save_snippet: {', '.join(missing_fields)}. " +
+                        "Please provide both snippet name and content."
+            })
 
         # 4. Log some details about the snippet being saved
         logging.info(f"Input text length: {len(code)} characters")
@@ -245,7 +282,9 @@ async def mcp_save_snippet(context: str, embeddings: str) -> str:
             
             # 7. Save the snippet and its embedding to Cosmos DB
             # Uses the same storage function as the HTTP endpoint
-            result = await cosmos_ops.upsert_document(name=name, project_id=project_id, code=code, embedding=embedding_vector)
+            result = await cosmos_ops.upsert_document(
+                name=name, project_id=project_id, code=code, embedding=embedding_vector
+            )
         except (json.JSONDecodeError, KeyError, IndexError) as e:
             # Handle errors in embedding processing
             logging.error(f"Embeddings processing error: {str(e)}")
@@ -284,13 +323,21 @@ async def http_get_snippet(req: func.HttpRequest) -> func.HttpResponse:
         name = req.route_params.get("name")
         if not name:
             # Return a 400 Bad Request if the name is missing
-            return func.HttpResponse(body=json.dumps({"error": "Missing snippet name in route"}), mimetype="application/json", status_code=400)
+            return func.HttpResponse(
+                body=json.dumps({"error": "Missing snippet name in route"}), 
+                mimetype="application/json", 
+                status_code=400
+            )
         
         # 2. Retrieve the snippet from Cosmos DB
         snippet = await cosmos_ops.get_snippet_by_id(name)
         if not snippet:
             # Return a 404 Not Found if the snippet doesn't exist
-            return func.HttpResponse(body=json.dumps({"error": f"Snippet '{name}' not found"}), mimetype="application/json", status_code=404)
+            return func.HttpResponse(
+                body=json.dumps({"error": f"Snippet '{name}' not found"}), 
+                mimetype="application/json", 
+                status_code=404
+            )
         
         # 3. Return the snippet as a JSON response
         return func.HttpResponse(body=json.dumps(snippet), mimetype="application/json", status_code=200)
@@ -305,7 +352,8 @@ async def http_get_snippet(req: func.HttpRequest) -> func.HttpResponse:
     arg_name="context",
     type="mcpToolTrigger",
     toolName="get_snippet",
-    description="Retrieves a previously saved code snippet using its unique name. The LLM should provide the 'snippetname' when it intends to fetch a specific snippet.",
+    description="Retrieves a previously saved code snippet using its unique name. " +
+                "The LLM should provide the 'snippetname' when it intends to fetch a specific snippet.",
     toolProperties=tool_properties_get_snippets_json,
 )
 async def mcp_get_snippet(context) -> str:
@@ -331,7 +379,10 @@ async def mcp_get_snippet(context) -> str:
 
         # 3. Validate the required parameter
         if not name:
-            return json.dumps({"error": f"Missing essential argument for get_snippet: {_SNIPPET_NAME_PROPERTY_NAME}. Please provide the snippet name to retrieve."})
+            return json.dumps({
+                "error": f"Missing essential argument for get_snippet: {_SNIPPET_NAME_PROPERTY_NAME}. " +
+                        "Please provide the snippet name to retrieve."
+            })
         
         # 4. Retrieve the snippet from Cosmos DB
         # Uses the same storage function as the HTTP endpoint
@@ -404,7 +455,10 @@ async def http_code_style(req: func.HttpRequest) -> func.HttpResponse:
     arg_name="context",
     type="mcpToolTrigger",
     toolName="code_style",
-    description="Generates a code style guide. This involves creating content for a new file (e.g., 'code-style-guide.md' to be placed in the workspace root). Optional 'chathistory' and 'userquery' can be supplied to customize or focus the guide; omit them for a general or default style guide.",
+    description="Generates a code style guide. This involves creating content for a new file " +
+                "(e.g., 'code-style-guide.md' to be placed in the workspace root). " +
+                "Optional 'chathistory' and 'userquery' can be supplied to customize or focus the guide; " +
+                "omit them for a general or default style guide.",
     toolProperties=tool_properties_code_style_json,
 )
 async def mcp_code_style(context) -> str:
@@ -500,7 +554,10 @@ async def http_deep_wiki(req: func.HttpRequest) -> func.HttpResponse:
     arg_name="context",
     type="mcpToolTrigger",
     toolName="deep_wiki",
-    description="Creates comprehensive 'deep wiki' documentation. This involves generating content for a new wiki file (e.g., 'deep-wiki.md' to be placed in the workspace root), often by analyzing existing code snippets. Optional 'chathistory' and 'userquery' can be provided to refine or focus the wiki content; omit them for a general wiki.",
+    description="Creates comprehensive 'deep wiki' documentation. This involves generating content " +
+                "for a new wiki file (e.g., 'deep-wiki.md' to be placed in the workspace root), " +
+                "often by analyzing existing code snippets. Optional 'chathistory' and 'userquery' " +
+                "can be provided to refine or focus the wiki content; omit them for a general wiki.",
     toolProperties=tool_properties_wiki_json,
 )
 async def mcp_deep_wiki(context) -> str:
@@ -545,4 +602,106 @@ async def mcp_deep_wiki(context) -> str:
     except Exception as e:
         # General error handling
         logging.error(f"Error in mcp_deep_wiki: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+# =============================================================================
+# STOCK PICKER FUNCTIONALITY
+# =============================================================================
+
+# HTTP endpoint for generating stock analysis and investment recommendations
+# This is accessible via standard HTTP POST requests
+@app.route(route="snippets/stock-analysis", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
+async def http_stock_picker(req: func.HttpRequest) -> func.HttpResponse:
+    """
+    HTTP trigger to generate stock analysis and investment recommendations based on saved snippets.
+    
+    Key features:
+    - Takes optional chat history and user query from the request body
+    - Uses AI to analyze saved financial/investment code snippets
+    - Generates detailed stock analysis as markdown content
+    
+    This leverages Azure AI to analyze patterns in financial code snippets
+    and generate comprehensive investment analysis and recommendations.
+    """
+    try:
+        logging.info("HTTP: Starting stock analysis content generation")
+        
+        # 1. Extract the request body, defaulting to an empty object if not provided
+        req_body = req.get_json() if req.get_body() else {} 
+        
+        # 2. Extract optional parameters from the request
+        chat_history = req_body.get("chatHistory", "")  # Previous conversation for context
+        user_query = req_body.get("userQuery", "")      # Specific user question or focus
+        
+        # 3. Generate the stock analysis using the AI agent
+        # This will analyze saved snippets and generate appropriate content
+        stock_analysis_content = await stock_picker.generate_stock_analysis(
+            chat_history=chat_history,
+            user_query=user_query
+        )
+        logging.info("HTTP: Successfully generated stock analysis content")
+        
+        # 4. Return the generated content as markdown
+        # Note the mimetype is text/markdown, not application/json
+        return func.HttpResponse(body=stock_analysis_content, mimetype="text/markdown", status_code=200)
+    except Exception as e:
+        # General error handling
+        logging.error(f"Error in http_stock_picker: {str(e)}")
+        return func.HttpResponse(body=json.dumps({"error": str(e)}), mimetype="application/json", status_code=500)
+
+# MCP tool for generating stock analysis and investment recommendations
+# This is accessible to AI assistants via the MCP protocol
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="stock_picker",
+    description="Generates comprehensive stock analysis and investment recommendations. " +
+                "This involves analyzing financial and investment-related code snippets to create " +
+                "content for a new file (e.g., 'stock-analysis.md' to be placed in the workspace root). " +
+                "Optional 'chathistory' and 'userquery' can be provided to refine or focus the analysis; " +
+                "omit them for a general financial analysis.",
+    toolProperties=tool_properties_stock_picker_json,
+)
+async def mcp_stock_picker(context) -> str:
+    """
+    MCP tool to generate stock analysis and investment recommendations based on saved snippets.
+    
+    Key features:
+    - Receives optional parameters from an AI assistant
+    - Uses the same AI agent as the HTTP endpoint
+    - Returns the generated content as a markdown string
+    
+    The difference from the HTTP endpoint:
+    - Receives parameters via the 'context' JSON string instead of HTTP body
+    - Returns results directly as a markdown string, not wrapped in JSON
+      (Following the same pattern as deep_wiki)
+    """
+    try:
+        logging.info("MCP: Starting stock analysis content generation")
+        
+        # 1. Parse the context JSON string to extract the arguments
+        mcp_data = json.loads(context)
+        args = mcp_data.get("arguments", {})
+
+        # 2. Extract optional parameters from the arguments
+        chat_history = args.get(_CHAT_HISTORY_PROPERTY_NAME, "")  # Previous conversation for context
+        user_query = args.get(_USER_QUERY_PROPERTY_NAME, "")      # Specific user question or focus
+        
+        # 3. Generate the stock analysis using the AI agent
+        # Uses the same function as the HTTP endpoint
+        stock_analysis_content = await stock_picker.generate_stock_analysis(
+            chat_history=chat_history,
+            user_query=user_query
+        )
+        logging.info("MCP: Successfully generated stock analysis content")
+        
+        # 4. Return the raw markdown content
+        # Note: Like deep_wiki, this returns raw markdown, not JSON
+        return stock_analysis_content 
+    except json.JSONDecodeError:
+        # Handle invalid context JSON
+        return json.dumps({"error": "Invalid JSON received in context"})
+    except Exception as e:
+        # General error handling
+        logging.error(f"Error in mcp_stock_picker: {str(e)}")
         return json.dumps({"error": str(e)})

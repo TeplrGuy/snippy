@@ -4,10 +4,11 @@
 # - Upsert and retrieve code snippet documents with embeddings
 # - Perform vector similarity search using DiskANN index
 
-import os
 import logging
-from azure.cosmos.aio import CosmosClient
+import os
+
 from azure.cosmos import PartitionKey
+from azure.cosmos.aio import CosmosClient
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
 from azure.identity.aio import DefaultAzureCredential
 

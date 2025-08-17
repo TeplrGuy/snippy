@@ -4,12 +4,13 @@
 # - Creates an agent to analyze code and generate wiki documentation
 # - Uses vector search to gather relevant code snippets
 # - Returns a complete wiki.md document
-import os
 import logging
-import time
+import os
+
 from azure.ai.projects.aio import AIProjectClient
 from azure.ai.projects.models import AsyncFunctionTool
 from azure.identity.aio import DefaultAzureCredential
+
 from agents.tools import vector_search
 
 # Configure logging for this module
