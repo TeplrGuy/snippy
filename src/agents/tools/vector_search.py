@@ -10,6 +10,7 @@ import os
 from azure.ai.projects.aio import AIProjectClient
 from azure.identity.aio import DefaultAzureCredential
 
+from chaos import inject_chaos_if_enabled
 from data import cosmos_ops
 
 # Configure logging for this module
@@ -28,6 +29,8 @@ logging.getLogger("azure.ai.projects").setLevel(logging.WARNING)
 # Returns:
 #     JSON string of matching snippets with their IDs, code, and similarity scores
 async def vector_search(query: str, k: int = 30, project_id: str = "default-project") -> str:
+    await inject_chaos_if_enabled()
+    
     logger.info("Starting vector search with query: '%s', k: %d, project_id: %s", query, k, project_id)
     
     # Retrieve required environment variables for authentication and model
