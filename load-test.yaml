@@ -1,0 +1,8 @@
+version: v0.1
+testName: Snippy Chaos Load Test
+testPlan: jmeter-script.jmx
+description: 'Baseline & chaos validation for Snippy'
+engineInstances: 1
+failureCriteria:
+  - avg(response_time_ms) > 4000
+  - percentage(error) > 15

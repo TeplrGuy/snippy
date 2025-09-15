@@ -12,6 +12,8 @@ from azure.cosmos.aio import CosmosClient
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
 from azure.identity.aio import DefaultAzureCredential
 
+from chaos import inject_chaos_if_enabled
+
 # Configure logging for this module
 logger = logging.getLogger(__name__)
 
@@ -153,6 +155,8 @@ async def upsert_document(name: str, project_id: str, code: str, embedding: list
     Raises:
         Exception: If document upsert fails
     """
+    await inject_chaos_if_enabled()
+    
     try:
         logger.info(f"Upserting document '{name}' in project '{project_id}'")
         logger.debug(f"Code length: {len(code)} chars, embedding length: {len(embedding)}")
@@ -194,6 +198,8 @@ async def get_snippet_by_id(name: str) -> dict:
     Raises:
         Exception: If document retrieval fails
     """
+    await inject_chaos_if_enabled()
+    
     try:
         logger.info(f"Retrieving snippet with id '{name}'")
         
@@ -246,6 +252,8 @@ async def query_similar_snippets(
     Raises:
         Exception: If query execution fails
     """
+    await inject_chaos_if_enabled()
+    
     try:
         logger.info(f"Executing vector similarity search (k={k}, project_id={project_id})")
         logger.debug(f"Query vector length: {len(query_vector)}")
