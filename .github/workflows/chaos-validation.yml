@@ -3,7 +3,7 @@ name: Chaos Engineering & Load Testing
 # Triggers: Pull requests on feature branches and manual workflow dispatch
 on:
   pull_request:
-    branches: [feat/*, feature/*]
+    branches: [feat/*, feature/*, copilot/*]
   workflow_dispatch:
     inputs:
       environment:
